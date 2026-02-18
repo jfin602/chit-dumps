@@ -1,0 +1,259 @@
+CHIT DUMP SYSTEM — GPT EXECUTION CONTRACT
+(ZIP-ENFORCED + ANTI-ECHO + CHANGELOG-VERIFIED)
+
+This document is the authoritative execution contract for the
+CHIT DUMP snapshot system.
+
+It defines how ChatGPT MUST interpret, modify, validate,
+and return code using the chit-dumps toolchain.
+
+This contract is absolute.
+No prior conversation, memory, repository state,
+or external context may override it.
+
+============================================================
+0) TOOLCHAIN DIRECTORY STRUCTURE (ABSOLUTE)
+============================================================
+
+The authoritative toolchain lives in:
+
+  <repo>/chit-dumps/
+
+Within it:
+
+  chit-dumps/
+    dump-generate.js
+    dump-apply.js
+    dump-validator.js
+    dump-repair.js
+    dump-undo.js
+    changelog.js
+    .chitconfig
+    .repo_state.json
+    .changelog.json
+    versions/
+
+All dump files live in:
+
+  chit-dumps/versions/
+
+All toolchain state files live inside chit-dumps/.
+They MUST NOT exist at repository root.
+
+============================================================
+1) SOURCE OF TRUTH (ABSOLUTE)
+============================================================
+
+When a file named like:
+
+  <dumpName>_vX.Y.Z.zip
+
+is uploaded, it is the ONLY source of truth.
+
+Notes:
+- dumpName comes from chit-dumps/.chitconfig ("name")
+- Versions may include or omit a leading "v"
+- dump.txt may begin with CHITDUMPv1 or CHITDUMPv2
+
+ChatGPT MUST:
+
+- Ignore all prior memory
+- Ignore previously discussed code
+- Treat the uploaded ZIP as the complete and authoritative codebase
+- Reconstruct the repo ONLY from dump.txt
+
+============================================================
+2) ZIP CONTENT REQUIREMENTS (STRICT)
+============================================================
+
+2.1 INPUT ZIP
+
+The INPUT ZIP is valid ONLY if it contains EXACTLY ONE file:
+
+  dump.txt
+
+No folders.
+No multiple files.
+No alternate filenames.
+No metadata.
+
+Multipart ZIPs are FORBIDDEN.
+
+2.2 dump.txt Format
+
+dump.txt MUST contain:
+
+HEADER:
+  CHITDUMPv1
+  or
+  CHITDUMPv2
+
+META JSON
+---PAYLOAD---
+Base64 payload
+
+If the header is invalid, the dump is invalid.
+
+============================================================
+3) TOOLCHAIN ENFORCEMENT (HARD RULE)
+============================================================
+
+ChatGPT MUST use the embedded chit-dumps scripts
+as the ONLY authoritative mechanism for:
+
+- generating dumps
+- validating dumps
+- applying dumps
+- repairing dumps
+- undoing dumps
+
+ChatGPT MUST NOT:
+- Hand-roll ZIP files
+- Reconstruct CRC headers manually
+- Approximate dump format
+- Modify dump.txt outside generator semantics
+
+The generator defines the canonical format.
+
+============================================================
+4) CHANGELOG INTEGRITY (MANDATORY VALIDATION)
+============================================================
+
+After ANY successful dump generation,
+ChatGPT MUST verify:
+
+- chit-dumps/.changelog.json contains a new entry
+- The entry:
+  - action = "generate"
+  - version matches META.version
+  - dumpName matches META.dumpName
+  - sha256 matches the actual ZIP
+  - toolchainVersion matches META.toolchainVersion
+
+After ANY apply:
+- chit-dumps/.repo_state.json activeVersion MUST update
+- changelog MUST record "apply"
+
+If changelog does not update correctly,
+the dump is INVALID.
+
+ChatGPT MUST treat changelog divergence as corruption.
+
+============================================================
+5) OUTPUT RULE (STRICT)
+============================================================
+
+When a multi-file change is requested:
+
+- Output ONLY a downloadable file:
+    <dumpName>_vA.B.C.zip
+- Do NOT paste dump contents in chat
+- The ZIP MUST contain EXACTLY:
+    dump.txt
+
+============================================================
+6) ANTI-ECHO GUARANTEE (HARD RULE)
+============================================================
+
+If changes are requested:
+
+The OUTPUT ZIP MUST NOT be identical to INPUT ZIP.
+
+Specifically:
+
+- ZIP binary MUST differ
+- dump.txt content MUST differ
+- META sha256 MUST differ
+- At least one repo file content MUST differ
+
+Meta-only changes (timestamps, version bumps) are INVALID.
+
+If no real repo file change exists:
+  ChatGPT MUST declare NO-OP
+  and MUST NOT emit a new ZIP.
+
+============================================================
+7) VERSIONING RULES (STRICT)
+============================================================
+
+If any change occurs:
+
+- Version MUST strictly increase
+- Filename MUST match:
+    <dumpName>_vX.Y.Z.zip
+- Version format MUST be vX.Y.Z
+
+Example:
+Input:  decortex_v0.2.8.zip
+Output: decortex_v0.2.9.zip
+
+============================================================
+8) FORCE VS REPAIR (CRITICAL DISTINCTION)
+============================================================
+
+--force MAY bypass:
+- version regression checks
+- overwrite protection
+
+--force MUST NOT bypass:
+- invalid header
+- toolchainVersion mismatch
+- dumpName mismatch
+- corrupt payload
+- changelog mismatch
+
+If dumpName or toolchainVersion mismatch:
+
+ChatGPT MUST:
+- Refuse apply
+- Log reason
+- Provide:
+    npm run dump:repair -- <dump>
+
+Repair modifies ONLY:
+- meta.dumpName
+- meta.toolchainVersion
+
+Repair MUST NOT modify payload files.
+
+============================================================
+9) SELF-VERIFICATION STEP (MANDATORY)
+============================================================
+
+Before returning any output dump:
+
+ChatGPT MUST:
+
+1. Generate dump via dump-generate
+2. Validate via dump-validator
+3. Apply dump locally via dump-apply
+4. Confirm:
+   - changelog updated
+   - repo_state updated
+   - no validation errors
+5. Only then provide the ZIP
+
+Failure to complete this loop invalidates the output.
+
+============================================================
+10) CLI EXPECTATIONS
+============================================================
+
+Valid CLI patterns:
+
+npm run dump:generate [-- vX.Y.Z] [--force]
+
+npm run dump:apply [-- vX.Y.Z|X.Y.Z|<file>.zip|<path>] [--force]
+
+npm run dump:validate [-- vX.Y.Z|X.Y.Z|<file>.zip|<path>]
+
+npm run dump:repair -- vX.Y.Z|X.Y.Z|<file>.zip|<path>
+
+npm run dump:undo
+
+If no version is provided to dump:apply:
+  The latest version in chit-dumps/versions MUST be applied.
+
+============================================================
+END OF CONTRACT
+============================================================

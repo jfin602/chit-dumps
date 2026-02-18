@@ -1,0 +1,16 @@
+{
+  "name": "decortex",
+  "validatorMode": "default",
+  "checks": {
+    "ordering": "strict",
+    "toolchainVersion": "none"
+  },
+  "filters": {
+    "ignore": ["src/public/img/**"],
+    "allow": [
+      "src/**",
+      "package.json",
+      ".env"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "chit-dumps",
+  "version": "2.5.0",
+  "description": "CHIT Dump snapshot toolchain (generate, apply, validate, repair, undo) with changelog enforcement.",
+  "type": "module",
+  "main": "./cli.js",
+  "files": [
+    "cli.js",
+    "postinstall.js",
+    "scripts/prepare.js",
+    "template/chit-dumps/**",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "postinstall": "node postinstall.js",
+    "prepare": "node ./scripts/prepare.js"
+  },
+  "keywords": [
+    "chit",
+    "dump",
+    "snapshot",
+    "toolchain",
+    "versioning"
+  ],
+  "author": "Jonathan Finney",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jfin602/chit-dumps"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "chit-dumps": "./cli.js"
+  }
+}
