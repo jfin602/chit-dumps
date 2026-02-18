@@ -1,4 +1,4 @@
-# CHIT Dumps v2.5.0
+<img width="800" alt="chit-dumps-cropped" src="https://github.com/user-attachments/assets/9183544d-5504-4857-8b54-883630deca41" />
 
 ## Full‑Project Snapshot Version Control for LLM Workflows
 
@@ -12,17 +12,17 @@ preventing silent regressions, feature drift, or accidental deletions.
 
 No more:
 
--   "It worked in the last version..."\
--   AI overwriting stable features while fixing unrelated files\
--   Hidden drift between versions\
+-   "It worked in the last version..."
+-   AI overwriting stable features while fixing unrelated files
+-   Hidden drift between versions
 -   Partial context misunderstandings
 
 CHIT Dumps guarantees that every change is:
 
--   Versioned\
--   Audited\
--   Structurally validated\
--   Compared against prior state\
+-   Versioned
+-   Audited
+-   Structurally validated
+-   Compared against prior state
 -   Deterministically restorable
 
 This system ensures ChatGPT (or any LLM) won't build you a castle and
@@ -41,7 +41,9 @@ Nothing pollutes your project root.
 
 ------------------------------------------------------------------------
 
-# Installation
+# Setting up your code and LLM
+
+## Install
 
 Place the `chit-dumps/` folder in your project root:
 
@@ -59,7 +61,7 @@ Place the `chit-dumps/` folder in your project root:
 
 ------------------------------------------------------------------------
 
-# Linking It Into Your Project
+## Link scripts to project
 
 Add this to your root `package.json`:
 
@@ -73,52 +75,99 @@ Add this to your root `package.json`:
 }
 ```
 
-All you need to do is call:
+------------------------------------------------------------------------
 
-``` bash
-npm run dump:<apply/generate>
+## Modify .chitconfig 
+
+``` .chitconfig
+{
+  "name": "dump",
+  "validatorMode": "default",
+  "checks": {
+    "ordering": "strict"
+  },
+  "filters": {
+    "ignore": [],
+    "allow": [
+      "src/**",
+      "package.json",
+      ".env"
+    ]
+  }
+}
 ```
 
-Both files can be called without a filepath or source. They will
-discover the correct file.
+This is the default .chitconfig. At the very least update the allow
+list to contain the actual paths to your source files. Take some time
+to plan out which files are necessary. The more files you send to the
+LLM the longer it takes to process a new version. And could even break
+the files if you accidentally add a whole folder of imgs or something.
+(Thats the exact reason the ignore list was made and kept optional)
+
+I recommend changing the name too so when you've got multiple projects
+running you can tell the dumps apart.
+
+------------------------------------------------------------------------
+
+## Send chit-dump scripts and contract to LLM
+
+Go to your project page and add every file insie chit-dump/
+
+![adding-chit-to-llm](https://github.com/user-attachments/assets/3141667f-ea18-4e6e-9828-229964943dd8)
+
+You'll notice theres also a file called GPT-CONTRACT.txt. This is a
+carefully crafted prompt that will lock in the chit-dump logic.
+
+You should see a response like this. Feel free to ask him how the rules work.
+
+<img width="639" height="500" alt="llm-response" src="https://github.com/user-attachments/assets/af8a60dd-4285-48b9-b08d-aa3e39810c82" />
+
+The LLM physically runs the same scripts you do. Reads the same changelog.
+Has the same .chitconfig and .repo_state.json
+
+From that point onwards you're ready to make and take some fat dumps.
 
 ------------------------------------------------------------------------
 
 # Basic Workflow
 
-## 1) Generate a snapshot ZIP
+## 1) Generate a dump
 
-    npm run dump:generate -- --version v2.5.0
+    npm run dump:generate
 
-Creates:
+Increments the version by one and creates:
 
-    chit-dumps/versions/<name>_v2.5.0.zip
+    chit-dumps/versions/<name>_v0.0.1.zip
 
-This ZIP contains exactly one file: `dump.txt` (CHITDUMPv2 format).
+This ZIP contains exactly one file: `dump.txt` - a compressed text file
+containing every line of code, log file, and even the dump scripts.
 
 ------------------------------------------------------------------------
 
 ## 2) Share the ZIP
 
-Upload the ZIP to your LLM, collaborator, or automation system.
+Upload the ZIP to your LLM, an write a detailed scoped prompt requesting 
+the updates you need. Finish with: regen dump. or regen version.
 
 The ZIP is the **authoritative source of truth**.
 
+The AI will use the very same scripts you used to generate and apply
+the snapshots to work with the file. Keeping everything  consistent.
+
+After the updates and multiple layers of validation, you'll get the 
+next version dump as a download link.
+
 ------------------------------------------------------------------------
 
-## 3) Write your update prompt
+## 3) Apply a dump file
 
-Write a detailed description of what you want added or fixed 
-for your next version. Try to keep the scope limited per update
+Once downloaded, put the latest version dump into the chit-dump/versions folder and run:
 
-------------------------------------------------------------------------
-
-## 3) Apply a snapshot ZIP
-
-    npm run dump:apply -- chit-dumps/versions/<name>_v2.5.0.zip
+`npm run dump:apply`
 
 This will:
 
+-   Automatically find newest version #
 -   Validate dump structure
 -   Validate toolchain version
 -   Write repo files
@@ -126,55 +175,39 @@ This will:
 -   Update `state.json`
 -   Append to `changelog.json`
 
-## dump-generate
+Or you could specify the path to the dump file if you prefer:
+
+    npm run dump:apply chit-dumps/versions/<path-to-zip>
+
+### Optional arguments.
+
+  -  `chit-dumps/versions/<name>_vA.B.C.zip`
+        Path to snapshot ZIP. Can be used to over-write files
+
+  - `--force`
+        Allows apply even if toolchainVersion differs.
+
+Test your code and make sure everything is working. If you get errors,
+copy the error message and send it back. (Add the offending file too!)
+
+------------------------------------------------------------------------
+
+## 4) Generate another dump, send it back to the LLM and repeat
 
     npm run dump:generate
     
-    -  `If ran with no arguments, script adds +0.0.1 to version`\
+    -  `If ran with no arguments, script adds +0.0.1 to version`
        `and generates the dump`
 
     npm run dump:generate -- --version vX.Y.Z
 
     ### Arguments:
 
-    -   `--version <vX.Y.Z>`\
+    -   `--version <vX.Y.Z>`
         Sets the snapshot version. Can be used to overwrite a version`
 
-    -   `--force`\
+    -   `--force`
         Overrides toolchainVersion mismatch validation (not recommended).
-
-------------------------------------------------------------------------
-
-## dump-apply
-
-    npm run dump:apply -- <path-to-zip>
-
-    ### Arguments:
-
-    -   `<path-to-zip>`\
-        Required. Path to snapshot ZIP.
-
-    -   `--force`\
-        Allows apply even if toolchainVersion differs.
-
-------------------------------------------------------------------------
-
-## dump-validate
-
-    npm run dump:validate -- <path-to-zip>
-
-    ### Arguments:
-
-    -   `<path-to-zip>`\
-        `Required. Validates structure without applying.`
-
-------------------------------------------------------------------------
-
-## dump-active
-
-    npm run dump:active
-
-No arguments. Displays current active version metadata.
 
 ------------------------------------------------------------------------
 
@@ -183,15 +216,17 @@ No arguments. Displays current active version metadata.
 The `.chitconfig` file lives inside the tool folder and defines snapshot
 metadata configuration.
 
-It typically contains:
+It contains:
 
--   `dumpName` --- canonical project name for snapshot naming
+-   `name` --- canonical project name for snapshot naming
 -   Optional configuration flags controlling generation behavior
 -   Validation rules for snapshot identity
+-   `allow` list. Files/directories you want added to dump [Required]
+-   `ignore` list. Paths to ignore. (Optional)
 
 During generation:
 
--   `meta.dumpName` inside `dump.txt` must match `.chitconfig`
+-   `meta.name` inside `dump.txt` must match `.chitconfig`
 -   Snapshot filenames use the configured name
 -   Validation enforces name consistency across versions
 
@@ -205,30 +240,11 @@ This prevents:
 
 ------------------------------------------------------------------------
 
-# Important Design Rules
-
--   All state lives inside `chit-dumps/`
--   Snapshots are single-file ZIPs
--   No multi-file ZIPs allowed
--   Validation occurs before apply
--   Changelog is append-only
--   Active state must match changelog history
--   Version bump required on every change
-
-------------------------------------------------------------------------
-
-# Why Use CHIT Dumps?
-
--   Deterministic full-project snapshots\
--   LLM-safe workflows\
--   No Git required\
--   Automatic stale file cleanup\
--   Append-only audit logging\
--   Toolchain-enforced integrity\
--   Zero root pollution\
--   Designed for long-running AI-assisted projects
-
-------------------------------------------------------------------------
-
 CHIT Dumps ensures your LLM workflow becomes structured, enforceable,
 and safe --- instead of chaotic and fragile.
+
+AI has greatly increased my productivity. And with chit-dumps versioning,
+finally large code-bases stop getting murdered.
+
+# Break out of the fix 1 thing, break 4 things loop!
+Let me know what you think of this little project! I hope it helps you too!
